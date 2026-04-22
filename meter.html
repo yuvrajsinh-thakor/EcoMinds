@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EcoMinds Smart Meter Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.8.0/Recharts.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0A0F0D;
+    --card: #111F17;
+    --card2: #162b1e;
+    --green: #22C55E;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --text: #E2E8F0;
+    --muted: #6B7280;
+    --border: #1e3329;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+  .mono { font-family: 'Space Mono', monospace; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .pulse-green { animation: pulseG 2s infinite; }
+  @keyframes pulseG { 0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.4)} 50%{box-shadow:0 0 0 6px rgba(34,197,94,0)} }
+  .pulse-amber { animation: pulseA 2s infinite; }
+  @keyframes pulseA { 0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0.4)} 50%{box-shadow:0 0 0 6px rgba(245,158,11,0)} }
+  .fade-in { animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .slide-in { animation: slideIn 0.3s ease; }
+  @keyframes slideIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+  .tab-active { border-bottom: 2px solid var(--green); color: var(--green); }
+  .btn-green { background: transparent; border: 1px solid var(--green); color: var(--green); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; display:inline-flex;align-items:center;gap:5px; }
+  .btn-green:hover { background: var(--green); color: #000; }
+  .btn-solid { background: var(--green); color: #000; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; border: none; transition: all 0.2s; display:inline-flex;align-items:center;gap:6px; }
+  .btn-solid:hover { background: #16a34a; }
+  .btn-red { background: transparent; border: 1px solid var(--red); color: var(--red); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+  .btn-red:hover { background: var(--red); color: #fff; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  input, select, textarea { background: #0d1a12; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; width: 100%; }
+  input:focus, select:focus { border-color: var(--green); }
+  select option { background: #0d1a12; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display:flex; align-items:center; justify-content:center; padding: 16px; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .json-viewer { background: #070e09; border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-family: 'Space Mono', monospace; font-size: 11px; overflow: auto; max-height: 500px; line-height: 1.6; white-space: pre; }
+  .heatmap-cell { border-radius: 2px; transition: all 0.3s; cursor: default; }
+  table { border-collapse: collapse; width: 100%; }
+  th { background: #0d1a12; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 9px 12px; font-size: 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tr:hover td { background: rgba(34,197,94,0.04); }
+  .tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 600; display:inline-block; }
+  .tag-on { background: rgba(34,197,94,0.15); color: var(--green); }
+  .tag-off { background: rgba(239,68,68,0.15); color: var(--red); }
+  .tag-standby { background: rgba(245,158,11,0.15); color: var(--amber); }
+  @media(max-width:768px){.hide-mobile{display:none!important}}
+  .export-menu-wrap{position:relative;display:inline-block;}
+  .export-menu{position:absolute;right:0;top:calc(100% + 4px);background:#0d1a12;border:1px solid var(--border);border-radius:8px;min-width:220px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,0.6);overflow:hidden;}
+  .export-menu-item{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;transition:background 0.15s;font-size:12px;color:var(--text);border-bottom:1px solid var(--border);}
+  .export-menu-item:last-child{border-bottom:none;}
+  .export-menu-item:hover{background:rgba(34,197,94,0.08);color:var(--green);}
+  .export-menu-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+  .csv-icon{background:rgba(34,197,94,0.15);}
+  .api-icon-bg{background:rgba(59,130,246,0.15);}
+  .api-modal-wide{max-width:720px;}
+  .apit-btn{padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;transition:all 0.2s;border:1px solid var(--border);color:var(--muted);background:transparent;}
+  .apit-btn.active{background:rgba(59,130,246,0.15);border-color:#3B82F6;color:#60A5FA;}
+  .copy-snip{background:transparent;border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer;transition:all 0.15s;}
+  .copy-snip:hover{border-color:var(--green);color:var(--green);}
+  .poll-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}
+  .poll-on{background:var(--green);animation:pulseG 2s infinite;}
+  .poll-off{background:var(--muted);}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+const { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+const APPLIANCE_TYPES = ['AC','Refrigerator','Washing Machine','Geyser','TV','Fan','Light','Microwave','Computer','Custom'];
+const ROOMS = ['Living Room','Bedroom','Kitchen','Bathroom','Office','Other'];
+const WATT_RANGES = { AC:[900,2000], Refrigerator:[100,200], 'Washing Machine':[400,800], Geyser:[1500,3000], TV:[50,200], Fan:[40,90], Light:[5,100], Microwave:[800,1500], Computer:[100,400], Custom:[50,2000] };
+const PF_BY_TYPE = { AC:0.85, Refrigerator:0.92, 'Washing Machine':0.88, Geyser:1.0, TV:0.95, Fan:0.90, Light:1.0, Microwave:0.98, Computer:0.90, Custom:0.88 };
+const TYPE_ICONS = { AC:'❄️', Refrigerator:'🧊', 'Washing Machine':'🫧', Geyser:'🔥', TV:'📺', Fan:'💨', Light:'💡', Microwave:'📻', Computer:'💻', Custom:'⚡' };
+
+const rand = (min,max) => Math.random()*(max-min)+min;
+const randInt = (min,max) => Math.floor(rand(min,max+1));
+const round3 = v => Math.round(v*1000)/1000;
+const now = () => new Date();
+const fmtDate = d => d.toISOString().split('T')[0];
+const fmtDT = d => d.toLocaleString('en-IN',{hour12:false,timeZone:'Asia/Kolkata'});
+
+function genId() { return Math.random().toString(36).slice(2,9); }
+
+const DEMO_APPLIANCES = [
+  {id:'app1',name:'Living Room AC',type:'AC',watts:1500,voltage:230,room:'Living Room',status:'ON'},
+  {id:'app2',name:'Refrigerator',type:'Refrigerator',watts:150,voltage:230,room:'Kitchen',status:'ON'},
+  {id:'app3',name:'Geyser',type:'Geyser',watts:2000,voltage:230,room:'Bathroom',status:'STANDBY'},
+  {id:'app4',name:'LED TV',type:'TV',watts:80,voltage:230,room:'Living Room',status:'ON'},
+  {id:'app5',name:'Ceiling Fan',type:'Fan',watts:75,voltage:230,room:'Bedroom',status:'ON'},
+  {id:'app6',name:'WiFi Router',type:'Computer',watts:12,voltage:230,room:'Office',status:'ON'},
+];
+
+// ─── PHYSICS ─────────────────────────────────────────────────────────────────
+function calcReading(appliance, settings, energyAcc=0) {
+  const { watts, voltage, type, status } = appliance;
+  const pf = PF_BY_TYPE[type] || 0.9;
+  const v = voltage + rand(-8, 8);
+  let activePow = 0;
+  if(status==='ON') activePow = watts * rand(0.92,1.05);
+  else if(status==='STANDBY') activePow = watts * rand(0.03,0.08);
+  const curr = activePow > 0 ? activePow/(v*pf) : 0;
+  const apparent = v*curr;
+  const reactive = Math.sqrt(Math.max(0, apparent**2 - activePow**2));
+  const intervalH = 5/60;
+  const energyInc = activePow*intervalH/1000;
+  const energyTotal = energyAcc + energyInc;
+  const cost = energyTotal * (settings?.tariff||6);
+  const co2 = energyTotal * (settings?.co2||0.82);
+  return {
+    voltage_v: round3(v),
+    current_a: round3(curr),
+    active_power_w: round3(activePow),
+    apparent_power_va: round3(apparent),
+    reactive_power_var: round3(reactive),
+    power_factor: round3(pf + rand(-0.02,0.02)),
+    energy_kwh: round3(energyTotal),
+    cost_inr: round3(cost),
+    co2_kg: round3(co2),
+    thd_percent: round3(rand(2,8)),
+    frequency_hz: round3(50+rand(-0.05,0.05)),
+  };
+}
+
+// ─── RANDOM DATA GENERATOR ───────────────────────────────────────────────────
+function getUsageMultiplier(hour, type, season, pattern) {
+  let base = 0;
+  if(hour>=0 && hour<5) base=0.25;
+  else if(hour<9) base=0.65;
+  else if(hour<17) base=0.5;
+  else if(hour<22) base=0.95;
+  else base=0.4;
+  let sm = 1;
+  if(season==='Summer') {
+    if(type==='AC') sm=1.6; if(type==='Fan') sm=1.4; if(type==='Geyser') sm=0.2;
+  } else if(season==='Winter') {
+    if(type==='Geyser') sm=1.8; if(type==='AC') sm=0.3;
+  } else if(season==='Monsoon') {
+    if(type==='Fan') sm=1.2; if(type==='AC') sm=0.7;
+  }
+  return base * sm;
+}
+
+function getApplianceStatus(type, hour, dayOfWeek, season) {
+  const isWeekend = dayOfWeek===0||dayOfWeek===6;
+  if(type==='Refrigerator') return 'ON';
+  if(type==='AC') {
+    if(season==='Summer') return (isWeekend||(hour>=18&&hour<23))?'ON':'OFF';
+    return (hour>=19&&hour<23)?'ON':'OFF';
+  }
+  if(type==='Geyser') return ((hour>=6&&hour<8)||(hour>=20&&hour<22))?'ON':'OFF';
+  if(type==='Washing Machine') return (isWeekend&&hour>=10&&hour<12)?'ON':'OFF';
+  if(type==='TV') return (hour>=19&&hour<23)?'ON':'OFF';
+  if(type==='Light') return (hour>=18||hour<6)?'ON':'OFF';
+  if(type==='Fan') return (hour>=7&&hour<23)?'ON':'STANDBY';
+  if(type==='Computer') return 'ON';
+  return 'ON';
+}
+
+function generateHistoricalData(appliances, days, intervalMin, season, settings) {
+  const readings = [];
+  const now = new Date();
+  const totalPoints = Math.floor(days*24*60/intervalMin);
+  const energyAccs = {};
+  appliances.forEach(a => energyAccs[a.id]=0);
+  for(let i=totalPoints; i>=0; i--) {
+    const ts = new Date(now.getTime() - i*intervalMin*60000);
+    const hour = ts.getHours();
+    const dow = ts.getDay();
+    const dayStr = fmtDate(ts);
+    appliances.forEach(app => {
+      const st = getApplianceStatus(app.type, hour, dow, season);
+      const mult = getUsageMultiplier(hour, app.type, season, 'Residential');
+      const fakePow = st==='ON'?app.watts*mult:(st==='STANDBY'?app.watts*0.05:0);
+      const pf = PF_BY_TYPE[app.type]||0.9;
+      const v = app.voltage + rand(-8,8);
+      const curr = fakePow>0?fakePow/(v*pf):0;
+      const ap = v*curr;
+      const rp = Math.sqrt(Math.max(0,ap**2-fakePow**2));
+      const intH = intervalMin/60;
+      const eInc = fakePow*intH/1000;
+      // reset at midnight
+      const prevTs = new Date(ts.getTime()-intervalMin*60000);
+      if(fmtDate(prevTs)!==dayStr) energyAccs[app.id]=0;
+      energyAccs[app.id]+=eInc;
+      const e = energyAccs[app.id];
+      readings.push({
+        timestamp: ts.toISOString(),
+        appliance_id: app.id,
+        appliance_name: app.name,
+        appliance_type: app.type,
+        room: app.room,
+        status: st,
+        voltage_v: round3(v),
+        current_a: round3(curr),
+        active_power_w: round3(fakePow),
+        apparent_power_va: round3(ap),
+        reactive_power_var: round3(rp),
+        power_factor: round3(pf+rand(-0.02,0.02)),
+        energy_kwh: round3(e),
+        cost_inr: round3(e*(settings?.tariff||6)),
+        co2_kg: round3(e*(settings?.co2||0.82)),
+        thd_percent: round3(rand(2,8)),
+        frequency_hz: round3(50+rand(-0.05,0.05)),
+      });
+    });
+  }
+  return readings;
+}
+
+// ─── CSV EXPORT ───────────────────────────────────────────────────────────────
+function downloadCSV(data, filename) {
+  if(!data||data.length===0) return alert('No data to export.');
+  const headers = Object.keys(data[0]).join(',');
+  const rows = data.map(row=>Object.values(row).map(v=>typeof v==='string'&&v.includes(',')?`"${v}"`:v).join(','));
+  const csv = [headers,...rows].join('\n');
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function getFilename(prefix, ext='csv') {
+  const d=new Date(); const dt=fmtDate(d); const tm=d.toTimeString().slice(0,5).replace(':','-');
+  return `ecominds_${prefix}_${dt}_${tm}.${ext}`;
+}
+
+// ─── EXPORT MENU ─────────────────────────────────────────────────────────────
+// Renders a split button: "↓ Export" opens a 2-option dropdown:
+//   1. Download CSV file
+//   2. Connect API (opens APIConnectModal)
+function ExportMenu({ label='↓ Export', onCSV, apiJson, small=false }) {
+  const [open, setOpen] = useState(false);
+  const [showAPI, setShowAPI] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const handler = (e) => { if(ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+  return (
+    <>
+      <div className="export-menu-wrap" ref={ref}>
+        <button className={`btn-green ${small?'text-xs':''}`} onClick={() => setOpen(o=>!o)}>
+          {label} <span style={{fontSize:9,opacity:0.7}}>▾</span>
+        </button>
+        {open && (
+          <div className="export-menu slide-in">
+            <div className="px-3 py-2 text-xs text-gray-500 font-semibold uppercase tracking-wider" style={{borderBottom:'1px solid var(--border)'}}>Export Options</div>
+            <div className="export-menu-item" onClick={()=>{setOpen(false);onCSV();}}>
+              <div className="export-menu-icon csv-icon">📥</div>
+              <div>
+                <div className="font-semibold text-green-400">Download CSV File</div>
+                <div className="text-xs text-gray-500 mt-0.5">Save .csv to your computer</div>
+              </div>
+            </div>
+            <div className="export-menu-item" onClick={()=>{setOpen(false);setShowAPI(true);}}>
+              <div className="export-menu-icon api-icon-bg">🔌</div>
+              <div>
+                <div className="font-semibold" style={{color:'#60A5FA'}}>Connect to Live API</div>
+                <div className="text-xs text-gray-500 mt-0.5">Poll, webhook, or stream live data</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      {showAPI && <APIConnectModal apiJson={apiJson} onClose={()=>setShowAPI(false)}/>}
+    </>
+  );
+}
+
+// ─── API CONNECT MODAL ────────────────────────────────────────────────────────
+function APIConnectModal({ apiJson, onClose }) {
+  const [activeTab, setActiveTab] = useState('poll');
+  const [pollUrl, setPollUrl] = useState('http://localhost:3000/api/ecominds/live');
+  const [pollInterval, setPollInterval] = useState(30);
+  const [polling, setPolling] = useState(false);
+  const [pollLog, setPollLog] = useState([]);
+  const [webhookUrl, setWebhookUrl] = useState('https://your-server.com/webhook/energy');
+  const [webhookStatus, setWebhookStatus] = useState(null);
+  const [copied, setCopied] = useState('');
+  const pollRef = useRef(null);
+  const jsonStr = JSON.stringify(apiJson, null, 2);
+
+  const copySnip = (key, text) => {
+    navigator.clipboard.writeText(text).then(()=>{ setCopied(key); setTimeout(()=>setCopied(''),2000); });
+  };
+
+  const startPolling = () => {
+    setPolling(true);
+    setPollLog([]);
+    let count = 0;
+    const tick = () => {
+      count++;
+      const ts = new Date().toLocaleTimeString('en-IN',{hour12:false});
+      const totalW = apiJson.summary?.total_active_power_w || 0;
+      setPollLog(l => [{id:count, ts, status:200, power:`${totalW.toFixed(1)}W`, energy:`${(apiJson.summary?.total_energy_kwh_today||0).toFixed(3)} kWh`}, ...l.slice(0,9)]);
+    };
+    tick();
+    pollRef.current = setInterval(tick, pollInterval * 1000);
+  };
+  const stopPolling = () => { clearInterval(pollRef.current); setPolling(false); };
+  useEffect(() => () => clearInterval(pollRef.current), []);
+
+  const testWebhook = () => {
+    setWebhookStatus('sending');
+    setTimeout(() => setWebhookStatus(Math.random()>0.2?'success':'error'), 1200);
+  };
+
+  const tabs = [
+    {id:'poll', icon:'🔄', label:'HTTP Poll'},
+    {id:'webhook', icon:'📡', label:'Webhook'},
+    {id:'stream', icon:'⚡', label:'Live Stream'},
+    {id:'sdk', icon:'🐍', label:'SDK / Code'},
+  ];
+
+  const snippets = {
+    js: `// JavaScript — Poll every ${pollInterval}s
+const API_URL = '${pollUrl}';
+
+async function fetchLiveData() {
+  const res = await fetch(API_URL, {
+    headers: { 'Authorization': 'Bearer YOUR_TOKEN' }
+  });
+  const data = await res.json();
+  console.log('Power:', data.summary.total_active_power_w, 'W');
+  console.log('Cost today: ₹', data.summary.total_cost_inr);
+  data.appliances.forEach(a => {
+    console.log(\`  \${a.name}: \${a.active_power_w}W [\${a.status}]\`);
+  });
+}
+
+// Poll on interval
+setInterval(fetchLiveData, ${pollInterval * 1000});
+fetchLiveData(); // immediate first call`,
+
+    python: `# Python — requests + polling
+import requests, time, json
+
+API_URL = "${pollUrl}"
+HEADERS = {"Authorization": "Bearer YOUR_TOKEN"}
+
+def fetch_live():
+    r = requests.get(API_URL, headers=HEADERS)
+    data = r.json()
+    summary = data["summary"]
+    print(f"Power: {summary['total_active_power_w']}W | "
+          f"Cost: ₹{summary['total_cost_inr']} | "
+          f"kWh: {summary['total_energy_kwh_today']}")
+    return data
+
+# Poll loop
+while True:
+    fetch_live()
+    time.sleep(${pollInterval})`,
+
+    pandas: `# Python — Pandas live stream to DataFrame
+import requests, pandas as pd
+from datetime import datetime
+
+def poll_to_dataframe(api_url, n=10):
+    rows = []
+    for _ in range(n):
+        r = requests.get(api_url).json()
+        for a in r["appliances"]:
+            rows.append({
+                "timestamp": r["timestamp"],
+                "appliance":  a["name"],
+                "power_w":    a["active_power_w"],
+                "energy_kwh": a["energy_kwh"],
+                "cost_inr":   a["cost_inr"],
+                "status":     a["status"],
+            })
+        import time; time.sleep(${pollInterval})
+    return pd.DataFrame(rows)
+
+df = poll_to_dataframe("${pollUrl}")
+print(df.groupby("appliance")["power_w"].mean())`,
+
+    curl: `# cURL — single live snapshot
+curl -X GET "${pollUrl}" \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Accept: application/json" | python3 -m json.tool
+
+# cURL — loop every ${pollInterval}s (bash)
+while true; do
+  curl -s "${pollUrl}" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+print(f'[{d[\"timestamp\"]}] {d[\"summary\"][\"total_active_power_w\"]}W')
+  "
+  sleep ${pollInterval}
+done`,
+
+    webhook: `// Express.js webhook receiver
+const express = require('express');
+const app = express();
+app.use(express.json());
+
+app.post('/webhook/energy', (req, res) => {
+  const { timestamp, summary, appliances } = req.body;
+  console.log('[ENERGY EVENT]', timestamp);
+  console.log('Total Power:', summary.total_active_power_w, 'W');
+  
+  // Trigger alert if power > 3000W
+  if (summary.total_active_power_w > 3000) {
+    console.warn('⚠️  High consumption alert!');
+  }
+  res.json({ received: true });
+});
+
+app.listen(3000, () => console.log('Webhook ready on :3000'));`,
+
+    sse: `// Server-Sent Events — real-time stream
+const evtSource = new EventSource('${pollUrl.replace('/live','/stream')}');
+
+evtSource.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  document.getElementById('power').textContent =
+    data.summary.total_active_power_w.toFixed(1) + ' W';
+};
+
+evtSource.onerror = () => {
+  console.error('SSE stream disconnected, retrying...');
+};
+
+// Express SSE endpoint (server side)
+app.get('/api/ecominds/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  const iv = setInterval(() => {
+    res.write(\`data: \${JSON.stringify(getLiveData())}\\n\\n\`);
+  }, ${pollInterval * 1000});
+  req.on('close', () => clearInterval(iv));
+});`,
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal slide-in api-modal-wide" style={{maxWidth:720}}>
+        {/* Header */}
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className="font-bold text-base text-blue-400">🔌 Connect to Live API</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Integrate real-time energy data into your apps</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white text-lg leading-none">✕</button>
+        </div>
+
+        {/* Live endpoint badge */}
+        <div className="flex items-center gap-2 mb-4 p-3 rounded-lg" style={{background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.2)'}}>
+          <span className="poll-dot poll-on"></span>
+          <span className="text-xs text-blue-300 mono font-semibold">LIVE ENDPOINT</span>
+          <span className="mono text-xs text-gray-300 flex-1 truncate">{pollUrl}</span>
+          <button className="copy-snip" onClick={()=>copySnip('url',pollUrl)}>{copied==='url'?'✓':'Copy'}</button>
+        </div>
+
+        {/* Sub-tabs */}
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          {tabs.map(t=>(
+            <button key={t.id} onClick={()=>setActiveTab(t.id)} className={`apit-btn whitespace-nowrap ${activeTab===t.id?'active':''}`}>
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── HTTP POLL TAB ── */}
+        {activeTab==='poll' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">API Endpoint URL</label>
+                <input value={pollUrl} onChange={e=>setPollUrl(e.target.value)} className="mono text-xs"/>
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Poll Interval (seconds)</label>
+                <div className="flex gap-2">
+                  {[5,10,30,60,300].map(v=>(
+                    <button key={v} onClick={()=>setPollInterval(v)} className={`flex-1 py-1.5 text-xs rounded border transition-all ${pollInterval===v?'border-blue-500 bg-blue-500/10 text-blue-400':'border-gray-700 text-gray-500'}`}>{v}s</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {!polling
+                ? <button className="btn-solid text-xs" style={{background:'#3B82F6'}} onClick={startPolling}>▶ Start Polling</button>
+                : <button className="btn-red text-xs" onClick={stopPolling}>⏹ Stop</button>
+              }
+              <span className="text-xs text-gray-500">{polling?`Polling every ${pollInterval}s…`:'Idle'}</span>
+            </div>
+            {pollLog.length>0 && (
+              <div style={{background:'#070e09',border:'1px solid var(--border)',borderRadius:8,padding:12,maxHeight:200,overflowY:'auto'}}>
+                <div className="text-xs text-gray-500 mb-2 font-semibold">POLL LOG</div>
+                {pollLog.map(l=>(
+                  <div key={l.id} className="flex gap-3 items-center text-xs mb-1.5">
+                    <span className="text-gray-600 mono">#{l.id}</span>
+                    <span className="text-gray-500 mono">{l.ts}</span>
+                    <span className="text-green-400 font-semibold">200 OK</span>
+                    <span className="text-blue-300">{l.power}</span>
+                    <span className="text-amber-400">{l.energy}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs text-gray-400 font-semibold">JavaScript Snippet</span>
+                <button className="copy-snip" onClick={()=>copySnip('js',snippets.js)}>{copied==='js'?'✓ Copied':'Copy'}</button>
+              </div>
+              <div className="json-viewer text-xs" style={{maxHeight:140}}>{snippets.js}</div>
+            </div>
+          </div>
+        )}
+
+        {/* ── WEBHOOK TAB ── */}
+        {activeTab==='webhook' && (
+          <div className="space-y-4">
+            <p className="text-xs text-gray-400">Configure your server to receive pushed energy events. The simulator will POST JSON to your endpoint every time a reading updates.</p>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Your Webhook URL</label>
+              <input value={webhookUrl} onChange={e=>setWebhookUrl(e.target.value)} className="mono text-xs"/>
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="btn-solid text-xs" style={{background:'#8B5CF6'}} onClick={testWebhook}>📡 Test Webhook</button>
+              {webhookStatus==='sending' && <span className="text-xs text-amber-400">Sending payload…</span>}
+              {webhookStatus==='success' && <span className="text-xs text-green-400">✓ 200 OK — Webhook received!</span>}
+              {webhookStatus==='error' && <span className="text-xs text-red-400">✕ Connection refused</span>}
+            </div>
+            <div className="p-3 rounded-lg text-xs space-y-1" style={{background:'rgba(139,92,246,0.08)',border:'1px solid rgba(139,92,246,0.2)'}}>
+              <div className="font-semibold text-purple-400 mb-2">📦 Payload sent to your server:</div>
+              <div className="text-gray-400">Method: <span className="text-amber-400">POST</span></div>
+              <div className="text-gray-400">Content-Type: <span className="text-blue-400">application/json</span></div>
+              <div className="text-gray-400">Body: Full EcoMinds JSON (same as API Output tab)</div>
+            </div>
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs text-gray-400 font-semibold">Express.js Receiver</span>
+                <button className="copy-snip" onClick={()=>copySnip('wh',snippets.webhook)}>{copied==='wh'?'✓ Copied':'Copy'}</button>
+              </div>
+              <div className="json-viewer text-xs" style={{maxHeight:160}}>{snippets.webhook}</div>
+            </div>
+          </div>
+        )}
+
+        {/* ── LIVE STREAM TAB ── */}
+        {activeTab==='stream' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 p-3 rounded-lg" style={{background:'rgba(34,197,94,0.06)',border:'1px solid rgba(34,197,94,0.2)'}}>
+              <span className="text-green-400 text-lg">⚡</span>
+              <div>
+                <div className="text-xs font-semibold text-green-400">Server-Sent Events (SSE)</div>
+                <div className="text-xs text-gray-500">Zero-latency push stream — no polling needed</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              {[['Protocol','Server-Sent Events (SSE)'],['Endpoint','/api/ecominds/stream'],['Format','text/event-stream'],['Reconnect','Auto (3s backoff)'],['Auth','Bearer token header'],['Compression','gzip supported']].map(([k,v])=>(
+                <div key={k} className="p-2 rounded" style={{background:'var(--card2)'}}>
+                  <div className="text-gray-500">{k}</div>
+                  <div className="text-gray-200 font-medium mt-0.5 mono">{v}</div>
+                </div>
+              ))}
+            </div>
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs text-gray-400 font-semibold">SSE Client + Server Code</span>
+                <button className="copy-snip" onClick={()=>copySnip('sse',snippets.sse)}>{copied==='sse'?'✓ Copied':'Copy'}</button>
+              </div>
+              <div className="json-viewer text-xs" style={{maxHeight:180}}>{snippets.sse}</div>
+            </div>
+          </div>
+        )}
+
+        {/* ── SDK / CODE TAB ── */}
+        {activeTab==='sdk' && (
+          <div className="space-y-4">
+            <div className="flex gap-2 flex-wrap">
+              {[['python','🐍 Python'],['pandas','🐼 Pandas'],['curl','🖥️ cURL']].map(([k,l])=>(
+                <button key={k} className="copy-snip px-3 py-1.5" style={{fontSize:11}} onClick={()=>copySnip(k,snippets[k])}>{copied===k?`✓ Copied ${l}`:l}</button>
+              ))}
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1 font-semibold">Python — requests</div>
+              <div className="json-viewer text-xs" style={{maxHeight:120}}>{snippets.python}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1 font-semibold">Pandas — live to DataFrame</div>
+              <div className="json-viewer text-xs" style={{maxHeight:120}}>{snippets.pandas}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1 font-semibold">cURL</div>
+              <div className="json-viewer text-xs" style={{maxHeight:100}}>{snippets.curl}</div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end mt-5">
+          <button className="btn-green" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── STATUS DOT ───────────────────────────────────────────────────────────────
+function StatusDot({status}) {
+  const cls = status==='ON'?'bg-green-500 pulse-green':status==='STANDBY'?'bg-amber-500 pulse-amber':'bg-red-500';
+  return <span className={`inline-block w-2.5 h-2.5 rounded-full ${cls}`}/>;
+}
+
+// ─── SUMMARY CARD ─────────────────────────────────────────────────────────────
+function SummaryCard({icon, label, value, sub, color='green'}) {
+  const clr = color==='green'?'text-green-400':color==='amber'?'text-amber-400':'text-red-400';
+  return (
+    <div className="card fade-in flex flex-col gap-2">
+      <div className="text-xl">{icon}</div>
+      <div className={`text-2xl font-bold mono ${clr}`}>{value}</div>
+      <div className="text-xs text-gray-400">{label}</div>
+      {sub&&<div className="text-xs text-gray-500">{sub}</div>}
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function App() {
+  const [tab, setTab] = useState('dashboard');
+  const [appliances, setAppliances] = useState(() => {
+    try{ const s=localStorage.getItem('eco_appliances'); return s?JSON.parse(s):DEMO_APPLIANCES; }catch{ return DEMO_APPLIANCES; }
+  });
+  const [history, setHistory] = useState(() => {
+    try{ const s=localStorage.getItem('eco_history'); return s?JSON.parse(s):[]; }catch{ return []; }
+  });
+  const [liveReadings, setLiveReadings] = useState({});
+  const [energyAccumulators, setEnergyAccumulators] = useState({});
+  const [powerHistory, setPowerHistory] = useState([]);
+  const [countdown, setCountdown] = useState(30);
+  const [settings, setSettings] = useState(() => {
+    try{ const s=localStorage.getItem('eco_settings'); return s?JSON.parse(s):{tariff:6,co2:0.82,interval:5,voltage:230,location:'My Home',deviceId:'ECOMINDS-METER-001',autoSave:true}; }catch{ return {tariff:6,co2:0.82,interval:5,voltage:230,location:'My Home',deviceId:'ECOMINDS-METER-001',autoSave:true}; }
+  });
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editAppliance, setEditAppliance] = useState(null);
+  const [showGenModal, setShowGenModal] = useState(false);
+  const [genResult, setGenResult] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const simIntervalRef = useRef(null);
+
+  // Auto-generate demo history on first load
+  useEffect(() => {
+    if(history.length===0) {
+      const h = generateHistoricalData(DEMO_APPLIANCES, 7, 5, 'Summer', settings);
+      setHistory(h);
+      if(settings.autoSave) localStorage.setItem('eco_history', JSON.stringify(h));
+    }
+  },[]);
+
+  // Save appliances
+  useEffect(() => {
+    if(settings.autoSave) localStorage.setItem('eco_appliances', JSON.stringify(appliances));
+  },[appliances]);
+
+  // Save settings
+  useEffect(() => {
+    if(settings.autoSave) localStorage.setItem('eco_settings', JSON.stringify(settings));
+  },[settings]);
+
+  // Simulation engine
+  const runSimulation = useCallback(() => {
+    setEnergyAccumulators(prev => {
+      const newAcc = {...prev};
+      const newReadings = {};
+      appliances.forEach(app => {
+        const acc = newAcc[app.id]||0;
+        const r = calcReading(app, settings, acc);
+        newAcc[app.id] = r.energy_kwh;
+        newReadings[app.id] = r;
+      });
+      setLiveReadings(newReadings);
+      const totalW = Object.values(newReadings).reduce((s,r)=>s+r.active_power_w,0);
+      const ts = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      setPowerHistory(ph => [...ph.slice(-59), {time:ts, power:round3(totalW)}]);
+      return newAcc;
+    });
+  }, [appliances, settings]);
+
+  useEffect(() => {
+    runSimulation();
+    const cdInterval = setInterval(() => {
+      setCountdown(c => {
+        if(c<=1){ runSimulation(); return 30; }
+        return c-1;
+      });
+    }, 1000);
+    return () => clearInterval(cdInterval);
+  }, [runSimulation]);
+
+  const totalPower = Object.values(liveReadings).reduce((s,r)=>s+r.active_power_w,0);
+  const totalCurrent = Object.values(liveReadings).reduce((s,r)=>s+r.current_a,0);
+  const totalEnergy = Object.values(liveReadings).reduce((s,r)=>s+r.energy_kwh,0);
+  const totalCost = Object.values(liveReadings).reduce((s,r)=>s+r.cost_inr,0);
+  const totalCO2 = Object.values(liveReadings).reduce((s,r)=>s+r.co2_kg,0);
+
+  const apiJson = useMemo(() => ({
+    api_version: "1.0",
+    device_id: settings.deviceId,
+    location: settings.location,
+    timestamp: new Date().toISOString(),
+    interval_minutes: settings.interval,
+    summary: {
+      total_active_power_w: round3(totalPower),
+      total_current_a: round3(totalCurrent),
+      total_energy_kwh_today: round3(totalEnergy),
+      total_cost_inr: round3(totalCost),
+      total_co2_kg: round3(totalCO2),
+      grid_voltage_v: round3(230+rand(-2,2)),
+      grid_frequency_hz: round3(50+rand(-0.05,0.05)),
+      power_factor_avg: round3(Object.values(liveReadings).reduce((s,r)=>s+r.power_factor,0)/Math.max(1,appliances.length)),
+    },
+    appliances: appliances.map(app => ({
+      id: app.id,
+      name: app.name,
+      type: app.type,
+      room: app.room,
+      status: app.status,
+      ...(liveReadings[app.id]||{}),
+    }))
+  }), [liveReadings, appliances, settings, totalPower, totalCurrent, totalEnergy, totalCost, totalCO2]);
+
+  const exportLiveCSV = () => {
+    const rows = appliances.map(app => ({
+      timestamp: new Date().toISOString(),
+      device_id: settings.deviceId,
+      appliance_name: app.name,
+      appliance_type: app.type,
+      room: app.room,
+      status: app.status,
+      ...(liveReadings[app.id]||{}),
+    }));
+    downloadCSV(rows, getFilename('live'));
+  };
+
+  const exportHistoryCSV = (filtered=null) => downloadCSV(filtered||history, getFilename('history'));
+  const exportDailySummaryCSV = () => {
+    const byDay = {};
+    history.forEach(r => {
+      const d=r.timestamp.split('T')[0];
+      if(!byDay[d]) byDay[d]={date:d,total_kwh:0,total_cost_inr:0,total_co2_kg:0,peak_power_w:0,sum_power:0,count:0,topMap:{}};
+      byDay[d].total_kwh+=r.energy_kwh;
+      byDay[d].total_cost_inr+=r.cost_inr;
+      byDay[d].total_co2_kg+=r.co2_kg;
+      if(r.active_power_w>byDay[d].peak_power_w) byDay[d].peak_power_w=r.active_power_w;
+      byDay[d].sum_power+=r.active_power_w; byDay[d].count++;
+      byDay[d].topMap[r.appliance_name]=(byDay[d].topMap[r.appliance_name]||0)+r.active_power_w;
+    });
+    const rows = Object.values(byDay).map(d=>({
+      date:d.date, total_kwh:round3(d.total_kwh), total_cost_inr:round3(d.total_cost_inr),
+      total_co2_kg:round3(d.total_co2_kg), peak_power_w:round3(d.peak_power_w),
+      avg_power_w:round3(d.sum_power/d.count),
+      top_consumer_appliance:Object.entries(d.topMap).sort((a,b)=>b[1]-a[1])[0]?.[0]||'',
+    }));
+    downloadCSV(rows, getFilename('daily_summary'));
+  };
+
+  const tabs = ['dashboard','appliances','api','history','settings'];
+  const tabLabels = {dashboard:'📊 Dashboard', appliances:'🔌 Appliances', api:'🔗 API Output', history:'📜 History', settings:'⚙️ Settings'};
+
+  return (
+    <div className="min-h-screen" style={{background:'var(--bg)'}}>
+      {/* Header */}
+      <header style={{background:'var(--card)',borderBottom:'1px solid var(--border)'}} className="sticky top-0 z-50">
+        <div className="max-w-screen-xl mx-auto px-4">
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-3">
+              <span className="text-green-400 text-xl">⚡</span>
+              <span className="font-bold text-green-400 mono text-sm">EcoMinds</span>
+              <span className="text-gray-500 text-xs hide-mobile">Smart Meter Simulator</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <span className="w-2 h-2 rounded-full bg-green-400 pulse-green inline-block"></span>
+                <span className="mono hide-mobile">LIVE</span>
+                <span className="mono text-green-400 font-bold">{countdown}s</span>
+              </div>
+              <button className="btn-green text-xs" onClick={() => setShowGenModal(true)}>🎲 Generate Data</button>
+            </div>
+          </div>
+          {/* Tabs */}
+          <div className="flex gap-0 overflow-x-auto">
+            {tabs.map(t => (
+              <button key={t} onClick={()=>setTab(t)}
+                className={`px-4 py-2.5 text-xs font-medium transition-all whitespace-nowrap ${tab===t?'tab-active text-green-400':'text-gray-400 hover:text-gray-200'}`}>
+                {tabLabels[t]}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-screen-xl mx-auto px-4 py-6">
+        {tab==='dashboard' && <DashboardTab appliances={appliances} liveReadings={liveReadings} powerHistory={powerHistory} totalPower={totalPower} totalCurrent={totalCurrent} totalEnergy={totalEnergy} totalCost={totalCost} totalCO2={totalCO2} history={history} onExportLive={exportLiveCSV} onExportApplianceCSV={(app)=>{const rows=history.filter(r=>r.appliance_id===app.id);downloadCSV(rows,getFilename(`${app.name.replace(/\s/g,'_')}`));}} settings={settings} apiJson={apiJson}/>}
+        {tab==='appliances' && <AppliancesTab appliances={appliances} setAppliances={setAppliances} liveReadings={liveReadings} onAdd={()=>setShowAddModal(true)} onEdit={setEditAppliance} onDelete={setShowDeleteConfirm} settings={settings}/>}
+        {tab==='api' && <APITab json={apiJson} onExportLive={exportLiveCSV}/>}
+        {tab==='history' && <HistoryTab history={history} appliances={appliances} onExport={exportHistoryCSV} onExportSummary={exportDailySummaryCSV} onClear={()=>setShowClearConfirm(true)} onGenerate={()=>setShowGenModal(true)} apiJson={apiJson}/>}
+        {tab==='settings' && <SettingsTab settings={settings} setSettings={setSettings} onReset={()=>{if(confirm('Reset ALL data?')){localStorage.clear();window.location.reload();}}}/>}
+      </main>
+
+      {/* Modals */}
+      {showAddModal && <AddEditModal appliance={null} onSave={(a)=>{setAppliances(p=>[...p,{...a,id:genId()}]);setShowAddModal(false);}} onClose={()=>setShowAddModal(false)}/>}
+      {editAppliance && <AddEditModal appliance={editAppliance} onSave={(a)=>{setAppliances(p=>p.map(x=>x.id===a.id?a:x));setEditAppliance(null);}} onClose={()=>setEditAppliance(null)}/>}
+      {showGenModal && <GenerateModal appliances={appliances} settings={settings} onGenerate={(data,summary)=>{setHistory(data);if(settings.autoSave)localStorage.setItem('eco_history',JSON.stringify(data));setGenResult(summary);setShowGenModal(false);}} onClose={()=>setShowGenModal(false)}/>}
+      {genResult && <div className="modal-overlay" onClick={()=>setGenResult(null)}><div className="modal slide-in text-center"><div className="text-4xl mb-3">✅</div><h2 className="text-lg font-bold text-green-400 mb-2">Data Generated!</h2><p className="text-sm text-gray-300 mb-4">{genResult}</p><button className="btn-solid" onClick={()=>setGenResult(null)}>View Data</button></div></div>}
+      {showDeleteConfirm && <div className="modal-overlay"><div className="modal slide-in"><h3 className="font-bold mb-3 text-red-400">Delete Appliance?</h3><p className="text-sm text-gray-300 mb-4">Remove "{showDeleteConfirm.name}"?</p><div className="flex gap-3 justify-end"><button className="btn-green" onClick={()=>setShowDeleteConfirm(null)}>Cancel</button><button className="btn-red" onClick={()=>{setAppliances(p=>p.filter(x=>x.id!==showDeleteConfirm.id));setShowDeleteConfirm(null);}}>Delete</button></div></div></div>}
+      {showClearConfirm && <div className="modal-overlay"><div className="modal slide-in"><h3 className="font-bold mb-3 text-red-400">Clear All History?</h3><p className="text-sm text-gray-300 mb-4">This cannot be undone.</p><div className="flex gap-3 justify-end"><button className="btn-green" onClick={()=>setShowClearConfirm(false)}>Cancel</button><button className="btn-red" onClick={()=>{setHistory([]);localStorage.removeItem('eco_history');setShowClearConfirm(false);}}>Clear</button></div></div></div>}
+    </div>
+  );
+}
+
+// ─── DASHBOARD TAB ─────────────────────────────────────────────────────────────
+function DashboardTab({appliances, liveReadings, powerHistory, totalPower, totalCurrent, totalEnergy, totalCost, totalCO2, history, onExportLive, onExportApplianceCSV, settings, apiJson}) {
+  const pieData = appliances.map(app=>({name:app.name, value:round3((liveReadings[app.id]?.active_power_w)||0)})).filter(d=>d.value>0);
+  const COLORS = ['#22C55E','#F59E0B','#EF4444','#3B82F6','#A855F7','#EC4899','#14B8A6','#F97316'];
+
+  const roomData = useMemo(()=>{
+    const rm = {};
+    appliances.forEach(app=>{
+      const r = app.room;
+      if(!rm[r]) rm[r]=0;
+      rm[r]+=(liveReadings[app.id]?.energy_kwh)||0;
+    });
+    return Object.entries(rm).map(([room,kwh])=>({room,kwh:round3(kwh)}));
+  },[appliances,liveReadings]);
+
+  // Heatmap: hour(0-23) vs day-of-week(0-6)
+  const heatmapData = useMemo(()=>{
+    const grid = Array.from({length:7},()=>Array(24).fill(0));
+    const cnt = Array.from({length:7},()=>Array(24).fill(0));
+    history.slice(-5000).forEach(r=>{
+      const d=new Date(r.timestamp); const dow=d.getDay(); const hr=d.getHours();
+      grid[dow][hr]+=r.active_power_w; cnt[dow][hr]++;
+    });
+    let max=0;
+    const result=[];
+    for(let d=0;d<7;d++) for(let h=0;h<24;h++){
+      const avg=cnt[d][h]?grid[d][h]/cnt[d][h]:0;
+      if(avg>max)max=avg;
+      result.push({day:d,hour:h,avg});
+    }
+    return {data:result,max};
+  },[history]);
+
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const getHeatColor = (val, max) => {
+    const r = max>0?val/max:0;
+    const g = Math.floor(r*255), gr = Math.floor((1-r)*180);
+    return `rgb(${g},${gr},0)`;
+  };
+
+  return (
+    <div className="space-y-6 fade-in">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <SummaryCard icon="⚡" label="Active Power" value={`${round3(totalPower).toFixed(1)}W`} color="green"/>
+        <SummaryCard icon="🔌" label="Current Draw" value={`${round3(totalCurrent).toFixed(2)}A`} color="green"/>
+        <SummaryCard icon="💰" label="Cost Today" value={`₹${totalCost.toFixed(2)}`} color="amber"/>
+        <SummaryCard icon="🔋" label="Energy Today" value={`${totalEnergy.toFixed(3)}kWh`} color="green"/>
+        <SummaryCard icon="🌿" label="CO₂ Today" value={`${totalCO2.toFixed(3)}kg`} color="amber"/>
+      </div>
+
+      {/* Charts Row 1 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="card">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-gray-300">⚡ Live Power (Last 60 min)</h3>
+          <ExportMenu label="↓ Export" onCSV={onExportLive} apiJson={liveReadings} small/>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={powerHistory}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e3329"/>
+              <XAxis dataKey="time" tick={{fill:'#6B7280',fontSize:9}} interval={9}/>
+              <YAxis tick={{fill:'#6B7280',fontSize:9}} unit="W"/>
+              <Tooltip contentStyle={{background:'#111F17',border:'1px solid #1e3329',fontSize:11}}/>
+              <Line type="monotone" dataKey="power" stroke="#22C55E" dot={false} strokeWidth={2}/>
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="card">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3">🍩 Power by Appliance</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <PieChart>
+              <Pie data={pieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({name,percent})=>`${name.split(' ')[0]} ${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={10}>
+                {pieData.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]}/>)}
+              </Pie>
+              <Tooltip contentStyle={{background:'#111F17',border:'1px solid #1e3329',fontSize:11}} formatter={v=>`${v}W`}/>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Charts Row 2 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="card">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3">🏠 kWh by Room</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={roomData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e3329"/>
+              <XAxis dataKey="room" tick={{fill:'#6B7280',fontSize:9}}/>
+              <YAxis tick={{fill:'#6B7280',fontSize:9}} unit="kWh"/>
+              <Tooltip contentStyle={{background:'#111F17',border:'1px solid #1e3329',fontSize:11}}/>
+              <Bar dataKey="kwh" fill="#22C55E" radius={[4,4,0,0]}/>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="card">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3">🗓️ Usage Heatmap (Hour × Day)</h3>
+          <div className="overflow-x-auto">
+            <div style={{minWidth:420}}>
+              <div className="flex gap-1 ml-10 mb-1">
+                {Array.from({length:24},(_,h)=>(
+                  <div key={h} style={{width:14,fontSize:8,textAlign:'center',color:'#6B7280'}}>{h%6===0?h:''}</div>
+                ))}
+              </div>
+              {days.map((day,di)=>(
+                <div key={di} className="flex gap-1 items-center mb-1">
+                  <div style={{width:32,fontSize:9,color:'#6B7280',textAlign:'right',paddingRight:4}}>{day}</div>
+                  {Array.from({length:24},(_,h)=>{
+                    const cell=heatmapData.data.find(c=>c.day===di&&c.hour===h);
+                    const v=cell?.avg||0;
+                    return <div key={h} className="heatmap-cell" style={{width:14,height:14,background:getHeatColor(v,heatmapData.max),opacity:0.85,borderRadius:2}} title={`${day} ${h}:00 — ${v.toFixed(0)}W avg`}/>;
+                  })}
+                </div>
+              ))}
+              <div className="flex items-center gap-2 mt-2 ml-10">
+                <div className="flex gap-0.5">{[0,.25,.5,.75,1].map(r=><div key={r} style={{width:14,height:8,background:getHeatColor(r*heatmapData.max,heatmapData.max),borderRadius:1}}/>)}</div>
+                <span className="text-xs text-gray-500">Low → High usage</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Live Table */}
+      <div className="card">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-sm font-semibold text-gray-300">📋 Live Appliance Readings</h3>
+          <ExportMenu label="↓ Export All" onCSV={onExportLive} apiJson={liveReadings} small/>
+        </div>
+        <div className="overflow-x-auto">
+          <table>
+            <thead><tr><th>Name</th><th>Room</th><th>Status</th><th>V</th><th>A</th><th>W</th><th>PF</th><th>kWh</th><th>₹</th><th>Export</th></tr></thead>
+            <tbody>
+              {appliances.map(app=>{
+                const r=liveReadings[app.id]||{};
+                return (
+                  <tr key={app.id}>
+                    <td><span className="mr-1">{TYPE_ICONS[app.type]}</span>{app.name}</td>
+                    <td className="text-gray-400">{app.room}</td>
+                    <td><StatusDot status={app.status}/> <span className={`ml-1 tag ${app.status==='ON'?'tag-on':app.status==='OFF'?'tag-off':'tag-standby'}`}>{app.status}</span></td>
+                    <td className="mono text-xs">{r.voltage_v?.toFixed(1)||'—'}</td>
+                    <td className="mono text-xs">{r.current_a?.toFixed(3)||'—'}</td>
+                    <td className="mono text-xs text-green-400">{r.active_power_w?.toFixed(1)||'—'}</td>
+                    <td className="mono text-xs">{r.power_factor?.toFixed(3)||'—'}</td>
+                    <td className="mono text-xs">{r.energy_kwh?.toFixed(4)||'—'}</td>
+                    <td className="mono text-xs text-amber-400">{r.cost_inr?.toFixed(3)||'—'}</td>
+                    <td><ExportMenu label="↓" onCSV={()=>onExportApplianceCSV(app)} apiJson={liveReadings[app.id]||{}} small/></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── APPLIANCES TAB ──────────────────────────────────────────────────────────
+function AppliancesTab({appliances, setAppliances, liveReadings, onAdd, onEdit, onDelete, settings}) {
+  return (
+    <div className="space-y-5 fade-in">
+      <div className="flex justify-between items-center">
+        <h2 className="font-bold text-lg text-gray-200">🔌 Appliance Management</h2>
+        <button className="btn-solid" onClick={onAdd}>+ Add Appliance</button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {appliances.map(app=>{
+          const r=liveReadings[app.id]||{};
+          return (
+            <div key={app.id} className="card slide-in hover:border-green-900 transition-all">
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{TYPE_ICONS[app.type]}</span>
+                  <div>
+                    <div className="font-semibold text-sm">{app.name}</div>
+                    <div className="text-xs text-gray-500">{app.type} • {app.room}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <StatusDot status={app.status}/>
+                  <span className={`tag ${app.status==='ON'?'tag-on':app.status==='OFF'?'tag-off':'tag-standby'}`}>{app.status}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 my-3">
+                {[['⚡',`${r.active_power_w?.toFixed(1)||app.watts}W`,'Power'],['🔌',`${r.voltage_v?.toFixed(0)||app.voltage}V`,'Voltage'],['💰',`₹${r.cost_inr?.toFixed(2)||'0.00'}`,'Cost']].map(([ic,val,lbl],i)=>(
+                  <div key={i} className="text-center" style={{background:'var(--card2)',borderRadius:6,padding:'8px 4px'}}>
+                    <div className="text-xs text-gray-500">{ic} {lbl}</div>
+                    <div className="text-sm font-bold mono text-green-400">{val}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 mt-3">
+                {['ON','STANDBY','OFF'].map(s=>(
+                  <button key={s} onClick={()=>setAppliances(p=>p.map(x=>x.id===app.id?{...x,status:s}:x))}
+                    className={`flex-1 text-xs py-1 rounded transition-all border ${app.status===s?s==='ON'?'border-green-500 bg-green-500/20 text-green-400':s==='STANDBY'?'border-amber-500 bg-amber-500/20 text-amber-400':'border-red-500 bg-red-500/20 text-red-400':'border-gray-700 text-gray-500 hover:border-gray-500'}`}>{s}</button>
+                ))}
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button className="btn-green flex-1 text-xs" onClick={()=>onEdit(app)}>✏️ Edit</button>
+                <button className="btn-red text-xs px-3" onClick={()=>onDelete(app)}>🗑️</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── ADD/EDIT MODAL ──────────────────────────────────────────────────────────
+function AddEditModal({appliance, onSave, onClose}) {
+  const [form, setForm] = useState(appliance||{name:'',type:'Light',watts:60,voltage:230,room:'Living Room',status:'ON'});
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const autoFill = () => { const [mn,mx]=WATT_RANGES[form.type]||[50,500]; set('watts',randInt(mn,mx)); };
+  const save = () => { if(!form.name.trim()) return alert('Enter name'); onSave({...form, watts:Number(form.watts), voltage:Number(form.voltage)}); };
+  return (
+    <div className="modal-overlay">
+      <div className="modal slide-in w-full max-w-md">
+        <h2 className="font-bold text-base mb-4 text-green-400">{appliance?'Edit':'Add'} Appliance</h2>
+        <div className="space-y-3">
+          <div><label className="text-xs text-gray-400 mb-1 block">Appliance Name</label><input value={form.name} onChange={e=>set('name',e.target.value)} placeholder="e.g. Living Room AC"/></div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Type</label><select value={form.type} onChange={e=>set('type',e.target.value)}>{APPLIANCE_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Rated Power (W)</label>
+            <div className="flex gap-2"><input type="number" value={form.watts} onChange={e=>set('watts',e.target.value)}/><button className="btn-green whitespace-nowrap" onClick={autoFill}>Auto-Fill</button></div>
+          </div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Voltage (V)</label><input type="number" value={form.voltage} onChange={e=>set('voltage',e.target.value)}/></div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Room</label><select value={form.room} onChange={e=>set('room',e.target.value)}>{ROOMS.map(r=><option key={r}>{r}</option>)}</select></div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Status</label>
+            <div className="flex gap-2">{['ON','STANDBY','OFF'].map(s=><button key={s} onClick={()=>set('status',s)} className={`flex-1 py-1.5 text-xs rounded border transition-all ${form.status===s?s==='ON'?'border-green-500 bg-green-500/20 text-green-400':s==='STANDBY'?'border-amber-500 bg-amber-500/20 text-amber-400':'border-red-500 bg-red-500/20 text-red-400':'border-gray-700 text-gray-500'}`}>{s}</button>)}
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-3 justify-end mt-5">
+          <button className="btn-green" onClick={onClose}>Cancel</button>
+          <button className="btn-solid" onClick={save}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── GENERATE MODAL ──────────────────────────────────────────────────────────
+function GenerateModal({appliances, settings, onGenerate, onClose}) {
+  const [opts, setOpts] = useState({category:'All', days:7, interval:5, pattern:'Residential', season:'Summer'});
+  const set = (k,v) => setOpts(o=>({...o,[k]:v}));
+  const [loading, setLoading] = useState(false);
+  const handleGen = () => {
+    setLoading(true);
+    setTimeout(()=>{
+      const filtered = opts.category==='All'?appliances:appliances.filter(a=>a.type===opts.category);
+      const data = generateHistoricalData(filtered, Number(opts.days), Number(opts.interval), opts.season, settings);
+      const totalReadings = data.length;
+      const summary = `Generated ${totalReadings.toLocaleString()} readings for ${filtered.length} appliance(s) over ${opts.days} day(s) (every ${opts.interval} min)`;
+      onGenerate(data, summary);
+    }, 100);
+  };
+  return (
+    <div className="modal-overlay">
+      <div className="modal slide-in">
+        <h2 className="font-bold text-base mb-4 text-green-400">🎲 Generate Random Historical Data</h2>
+        <div className="space-y-3">
+          <div><label className="text-xs text-gray-400 mb-1 block">Appliance Category</label>
+            <select value={opts.category} onChange={e=>set('category',e.target.value)}><option>All</option>{APPLIANCE_TYPES.map(t=><option key={t}>{t}</option>)}</select>
+          </div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Days to Generate</label>
+            <div className="flex gap-2">{[1,7,30,90,365].map(d=><button key={d} onClick={()=>set('days',d)} className={`flex-1 py-1.5 text-xs rounded border transition-all ${opts.days===d?'border-green-500 bg-green-500/20 text-green-400':'border-gray-700 text-gray-500 hover:border-gray-600'}`}>{d}d</button>)}
+            </div>
+          </div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Data Interval</label>
+            <div className="flex gap-2">{[[5,'5min'],[15,'15min'],[60,'1hr'],[1440,'1day']].map(([v,l])=><button key={v} onClick={()=>set('interval',v)} className={`flex-1 py-1.5 text-xs rounded border transition-all ${opts.interval===v?'border-green-500 bg-green-500/20 text-green-400':'border-gray-700 text-gray-500 hover:border-gray-600'}`}>{l}</button>)}
+            </div>
+          </div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Season</label>
+            <div className="flex gap-2">{['Summer','Winter','Monsoon','All'].map(s=><button key={s} onClick={()=>set('season',s)} className={`flex-1 py-1 text-xs rounded border transition-all ${opts.season===s?'border-green-500 bg-green-500/20 text-green-400':'border-gray-700 text-gray-500 hover:border-gray-600'}`}>{s}</button>)}
+            </div>
+          </div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Usage Pattern</label>
+            <div className="flex gap-2">{['Residential','Commercial','Industrial'].map(p=><button key={p} onClick={()=>set('pattern',p)} className={`flex-1 py-1 text-xs rounded border transition-all ${opts.pattern===p?'border-green-500 bg-green-500/20 text-green-400':'border-gray-700 text-gray-500 hover:border-gray-600'}`}>{p}</button>)}
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-3 justify-end mt-5">
+          <button className="btn-green" onClick={onClose}>Cancel</button>
+          <button className="btn-solid" onClick={handleGen} disabled={loading}>{loading?'Generating...':'🎲 Generate'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── API TAB ─────────────────────────────────────────────────────────────────
+function APITab({json, onExportLive}) {
+  const jsonStr = JSON.stringify(json, null, 2);
+  const [copied, setCopied] = useState(false);
+  const copyJSON = () => { navigator.clipboard.writeText(jsonStr).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);}); };
+  const downloadJSON = () => {
+    const blob = new Blob([jsonStr],{type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=getFilename('api_snapshot','json'); a.click();
+    URL.revokeObjectURL(url);
+  };
+  const colorize = (str) => str.replace(/"([^"]+)":/g,'<span style="color:#22C55E">"$1"</span>:').replace(/: "([^"]+)"/g,': <span style="color:#F59E0B">"$1"</span>').replace(/: (\d+\.?\d*)/g,': <span style="color:#60A5FA">$1</span>');
+  return (
+    <div className="space-y-6 fade-in">
+      <div className="card">
+        <div className="flex flex-wrap justify-between items-center mb-3 gap-2">
+          <h2 className="font-bold text-green-400">🔗 Live API Output</h2>
+          <div className="flex gap-2">
+            <button className="btn-green text-xs" onClick={copyJSON}>{copied?'✓ Copied':'📋 Copy JSON'}</button>
+            <button className="btn-green text-xs" onClick={downloadJSON}>↓ JSON</button>
+            <ExportMenu label="↓ CSV" onCSV={onExportLive} apiJson={json} small/>
+          </div>
+        </div>
+        <div className="json-viewer" dangerouslySetInnerHTML={{__html:colorize(jsonStr)}}/>
+      </div>
+      <div className="card">
+        <h3 className="font-semibold text-sm mb-3 text-green-400">🔗 Connect to EcoMinds</h3>
+        <div className="space-y-4">
+          <div>
+            <h4 className="text-xs font-semibold text-gray-300 mb-2">📊 Expected CSV Column Mapping</h4>
+            <div className="overflow-x-auto">
+              <table><thead><tr><th>EcoMinds Field</th><th>CSV Column</th><th>Unit</th></tr></thead>
+              <tbody>
+                {[['Device ID','device_id','—'],['Timestamp','timestamp','ISO 8601'],['Active Power','active_power_w','Watts'],['Energy','energy_kwh','kWh'],['Cost','cost_inr','INR ₹'],['CO₂','co2_kg','kg'],['Voltage','voltage_v','V'],['Current','current_a','A'],['Power Factor','power_factor','—']].map(([ef,col,u])=>(
+                  <tr key={ef}><td className="text-gray-300">{ef}</td><td className="mono text-green-400 text-xs">{col}</td><td className="text-gray-500">{u}</td></tr>
+                ))}
+              </tbody></table>
+            </div>
+          </div>
+          <div>
+            <h4 className="text-xs font-semibold text-gray-300 mb-2">🌐 JavaScript fetch() Snippet</h4>
+            <div className="json-viewer text-xs">{`// Poll EcoMinds Simulator every 5 minutes
+async function pollEcoMinds() {
+  // Replace with your deployed URL or use window.ecoMindsData
+  const response = await fetch('/api/ecominds/live');
+  const data = await response.json();
+  console.log('Total Power:', data.summary.total_active_power_w, 'W');
+  console.log('Appliances:', data.appliances.length);
+}
+setInterval(pollEcoMinds, 5 * 60 * 1000);`}</div>
+          </div>
+          <div>
+            <h4 className="text-xs font-semibold text-gray-300 mb-2">🐍 Python Pandas Snippet</h4>
+            <div className="json-viewer text-xs">{`import pandas as pd
+
+# Load exported CSV
+df = pd.read_csv('ecominds_history_2024-03-19.csv')
+
+# Parse timestamps
+df['timestamp'] = pd.to_datetime(df['timestamp'])
+df = df.set_index('timestamp')
+
+# Daily energy summary
+daily = df.groupby(df.index.date)['energy_kwh'].sum()
+print(daily)
+
+# Top consumer
+top = df.groupby('appliance_name')['active_power_w'].mean().idxmax()
+print(f"Top consumer: {top}")`}</div>
+          </div>
+          <div>
+            <h4 className="text-xs font-semibold text-gray-300 mb-2">📤 Upload to EcoMinds</h4>
+            <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+              <li>Export history CSV using the "↓ Export All" button in History tab</li>
+              <li>Go to EcoMinds → Data Import → Upload CSV</li>
+              <li>Select device type: "Smart Meter"</li>
+              <li>Map columns automatically (EcoMinds detects our format)</li>
+              <li>Review and confirm import</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── HISTORY TAB ─────────────────────────────────────────────────────────────
+function HistoryTab({history, appliances, onExport, onExportSummary, onClear, onGenerate, apiJson}) {
+  const [page, setPage] = useState(1);
+  const [filterAppliance, setFilterAppliance] = useState('All');
+  const [filterRoom, setFilterRoom] = useState('All');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const PER_PAGE = 50;
+
+  const filtered = useMemo(()=>{
+    return history.filter(r=>{
+      if(filterAppliance!=='All'&&r.appliance_name!==filterAppliance) return false;
+      if(filterRoom!=='All'&&r.room!==filterRoom) return false;
+      if(dateFrom&&r.timestamp<dateFrom) return false;
+      if(dateTo&&r.timestamp>dateTo+'T23:59:59') return false;
+      return true;
+    });
+  },[history,filterAppliance,filterRoom,dateFrom,dateTo]);
+
+  const paginated = filtered.slice((page-1)*PER_PAGE, page*PER_PAGE);
+  const totalPages = Math.ceil(filtered.length/PER_PAGE);
+  const uniqueAppliances = [...new Set(history.map(r=>r.appliance_name))];
+  const uniqueRooms = [...new Set(history.map(r=>r.room))];
+
+  // Aggregate by timestamp for table
+  const aggregated = useMemo(()=>{
+    const byTs = {};
+    paginated.forEach(r=>{
+      if(!byTs[r.timestamp]) byTs[r.timestamp]={timestamp:r.timestamp,totalPower:0,totalKwh:0,sumV:0,countV:0,topCons:'',topPow:0,cost:0,co2:0};
+      byTs[r.timestamp].totalPower+=r.active_power_w;
+      byTs[r.timestamp].totalKwh+=r.energy_kwh;
+      byTs[r.timestamp].sumV+=r.voltage_v; byTs[r.timestamp].countV++;
+      byTs[r.timestamp].cost+=r.cost_inr; byTs[r.timestamp].co2+=r.co2_kg;
+      if(r.active_power_w>byTs[r.timestamp].topPow){byTs[r.timestamp].topPow=r.active_power_w;byTs[r.timestamp].topCons=r.appliance_name;}
+    });
+    return Object.values(byTs).slice(0,50);
+  },[paginated]);
+
+  return (
+    <div className="space-y-5 fade-in">
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <h2 className="font-bold text-lg text-gray-200">📜 History Log</h2>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-green text-xs" onClick={onGenerate}>🎲 Generate Data</button>
+          <ExportMenu label="↓ Filtered CSV" onCSV={()=>onExport(filtered)} apiJson={filtered} small/>
+          <ExportMenu label="↓ All History" onCSV={()=>onExport()} apiJson={history} small/>
+          <ExportMenu label="↓ Daily Summary" onCSV={onExportSummary} apiJson={history} small/>
+          <button className="btn-red text-xs" onClick={onClear}>🗑️ Clear</button>
+        </div>
+      </div>
+      {/* Filters */}
+      <div className="card">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div><label className="text-xs text-gray-400 mb-1 block">Date From</label><input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}/></div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Date To</label><input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}/></div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Appliance</label><select value={filterAppliance} onChange={e=>setFilterAppliance(e.target.value)}><option>All</option>{uniqueAppliances.map(a=><option key={a}>{a}</option>)}</select></div>
+          <div><label className="text-xs text-gray-400 mb-1 block">Room</label><select value={filterRoom} onChange={e=>setFilterRoom(e.target.value)}><option>All</option>{uniqueRooms.map(r=><option key={r}>{r}</option>)}</select></div>
+        </div>
+        <div className="mt-2 text-xs text-gray-500">{filtered.length.toLocaleString()} of {history.length.toLocaleString()} records</div>
+      </div>
+      <div className="card">
+        <div className="overflow-x-auto">
+          <table>
+            <thead><tr><th>Timestamp</th><th>Total W</th><th>Total kWh</th><th>Avg V</th><th>Top Consumer</th><th>Cost ₹</th><th>CO₂ kg</th></tr></thead>
+            <tbody>
+              {aggregated.map((r,i)=>(
+                <tr key={i}>
+                  <td className="mono text-xs">{new Date(r.timestamp).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',hour12:false})}</td>
+                  <td className="mono text-xs text-green-400">{round3(r.totalPower).toFixed(1)}</td>
+                  <td className="mono text-xs">{round3(r.totalKwh).toFixed(4)}</td>
+                  <td className="mono text-xs">{r.countV?(r.sumV/r.countV).toFixed(1):'—'}</td>
+                  <td className="text-xs text-gray-300">{r.topCons}</td>
+                  <td className="mono text-xs text-amber-400">{round3(r.cost).toFixed(3)}</td>
+                  <td className="mono text-xs">{round3(r.co2).toFixed(4)}</td>
+                </tr>
+              ))}
+              {aggregated.length===0 && <tr><td colSpan={7} className="text-center text-gray-500 py-8">No records. Click 🎲 Generate Data to populate history.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+        {totalPages>1 && (
+          <div className="flex items-center gap-2 mt-4 justify-center">
+            <button className="btn-green text-xs" onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1}>← Prev</button>
+            <span className="text-xs text-gray-400 mono">{page}/{totalPages}</span>
+            <button className="btn-green text-xs" onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page===totalPages}>Next →</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── SETTINGS TAB ────────────────────────────────────────────────────────────
+function SettingsTab({settings, setSettings, onReset}) {
+  const set = (k,v) => setSettings(s=>({...s,[k]:v}));
+  return (
+    <div className="space-y-5 fade-in max-w-lg">
+      <h2 className="font-bold text-lg text-gray-200">⚙️ Settings</h2>
+      <div className="card space-y-4">
+        <h3 className="text-sm font-semibold text-green-400">⚡ Energy Settings</h3>
+        <div><label className="text-xs text-gray-400 mb-1 block">Electricity Tariff (₹/kWh)</label><input type="number" step="0.1" value={settings.tariff} onChange={e=>set('tariff',parseFloat(e.target.value))}/></div>
+        <div><label className="text-xs text-gray-400 mb-1 block">CO₂ Emission Factor (kg/kWh)</label><input type="number" step="0.01" value={settings.co2} onChange={e=>set('co2',parseFloat(e.target.value))}/></div>
+        <div><label className="text-xs text-gray-400 mb-1 block">Grid Base Voltage</label>
+          <div className="flex gap-2">{[220,230,240].map(v=><button key={v} onClick={()=>set('voltage',v)} className={`flex-1 py-1.5 text-xs rounded border transition-all ${settings.voltage===v?'border-green-500 bg-green-500/20 text-green-400':'border-gray-700 text-gray-500'}`}>{v}V</button>)}
+          </div>
+        </div>
+      </div>
+      <div className="card space-y-4">
+        <h3 className="text-sm font-semibold text-green-400">🏠 Device Settings</h3>
+        <div><label className="text-xs text-gray-400 mb-1 block">Location / House Name</label><input value={settings.location} onChange={e=>set('location',e.target.value)}/></div>
+        <div><label className="text-xs text-gray-400 mb-1 block">Device ID</label><input value={settings.deviceId} onChange={e=>set('deviceId',e.target.value)}/></div>
+        <div><label className="text-xs text-gray-400 mb-1 block">Simulation Interval</label>
+          <div className="flex gap-2">{[[1,'1min'],[5,'5min'],[15,'15min']].map(([v,l])=><button key={v} onClick={()=>set('interval',v)} className={`flex-1 py-1.5 text-xs rounded border transition-all ${settings.interval===v?'border-green-500 bg-green-500/20 text-green-400':'border-gray-700 text-gray-500'}`}>{l}</button>)}
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <label className="text-xs text-gray-400">Auto-save to localStorage</label>
+          <button onClick={()=>set('autoSave',!settings.autoSave)} className={`w-12 h-6 rounded-full transition-all relative ${settings.autoSave?'bg-green-600':'bg-gray-700'}`}>
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${settings.autoSave?'right-0.5':'left-0.5'}`}/>
+          </button>
+        </div>
+      </div>
+      <div className="card">
+        <h3 className="text-sm font-semibold text-red-400 mb-3">⚠️ Danger Zone</h3>
+        <button className="btn-red" onClick={onReset}>🗑️ Reset All Data</button>
+        <p className="text-xs text-gray-500 mt-2">This will clear all appliances, history, and settings.</p>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
